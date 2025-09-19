@@ -8,3 +8,5 @@ streamlit==1.49.1
 python-dotenv==1.1.1
 httpx==0.28.1
 click
+fastapi[all]==0.116.2
+firebase-admin

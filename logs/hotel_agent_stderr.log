@@ -1,0 +1,10 @@
+INFO:hotel_agent.agent_executor:Initializing HotelADKAgentExecutor for agent: hotel_agent
+INFO:hotel_agent.agent_executor:ADK Runner accepted for app 'HOTEL_a2a_app' for agent 'hotel_agent'
+INFO:__main__:Starting Hotel Concierge Agent server on http://localhost:8010
+INFO:__main__:Agent Name: Hotel Concierge Agent, Version: 1.0.0
+INFO:__main__:  Skill: Search for Hotels (ID: hotel_search, Tags: ['hotel', 'booking', 'accommodation', 'travel', 'itinerary'])
+INFO:     Started server process [42364]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://localhost:8010 (Press CTRL+C to quit)
+WARNING:a2a.server.apps.jsonrpc.jsonrpc_app:Deprecated agent card endpoint '/.well-known/agent.json' accessed. Please use '/.well-known/agent-card.json' instead. This endpoint will be removed in a future version.

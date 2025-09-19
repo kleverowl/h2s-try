@@ -8,3 +8,5 @@ wheels/
 
 # Virtual environments
 .venv
+.env
+hack2skill-emt-firebase-adminsdk-fbsvc-b2ea50c49d.json

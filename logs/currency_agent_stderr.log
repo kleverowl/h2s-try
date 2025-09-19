@@ -1,0 +1,10 @@
+INFO:currency_agent.agent_executor:Initializing CurrencyADKAgentExecutor for agent: currency_agent
+INFO:currency_agent.agent_executor:ADK Runner accepted for app 'CURRENCY_a2a_app' for agent 'currency_agent'
+INFO:__main__:Starting Currency Concierge Agent server on http://localhost:8008
+INFO:__main__:Agent Name: Currency Concierge Agent, Version: 1.0.0
+INFO:__main__:  Skill: Convert Currency (ID: currency_conversion, Tags: ['currency', 'conversion', 'finance', 'travel'])
+INFO:     Started server process [41692]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://localhost:8008 (Press CTRL+C to quit)
+WARNING:a2a.server.apps.jsonrpc.jsonrpc_app:Deprecated agent card endpoint '/.well-known/agent.json' accessed. Please use '/.well-known/agent-card.json' instead. This endpoint will be removed in a future version.

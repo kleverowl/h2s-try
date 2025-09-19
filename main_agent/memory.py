@@ -58,6 +58,7 @@ def update_state(tool_context: ToolContext, state: ItineraryState):
     """
     tool_context.state["itinerary_state"] = state.dict()
 
+
 def _update_nested_field(obj: Any, keys: List[str], value: Any):
     """
     Recursively traverses the object structure to update a nested field.

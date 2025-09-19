@@ -1,0 +1,10 @@
+INFO:activity_agent.agent_executor:Initializing ActivityADKAgentExecutor for agent: activity_agent
+INFO:activity_agent.agent_executor:ADK Runner accepted for app 'ACTIVITY_a2a_app' for agent 'activity_agent'
+INFO:__main__:Starting Activity Concierge Agent server on http://localhost:8005
+INFO:__main__:Agent Name: Activity Concierge Agent, Version: 1.0.0
+INFO:__main__:  Skill: Search for Activities (ID: activity_search, Tags: ['activities', 'sightseeing', 'tours', 'travel', 'itinerary'])
+INFO:     Started server process [49328]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://localhost:8005 (Press CTRL+C to quit)
+WARNING:a2a.server.apps.jsonrpc.jsonrpc_app:Deprecated agent card endpoint '/.well-known/agent.json' accessed. Please use '/.well-known/agent-card.json' instead. This endpoint will be removed in a future version.
