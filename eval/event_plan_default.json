@@ -1,0 +1,68 @@
+{
+  "state": {
+    "user_details": {
+      "name": "",
+      "email": "",
+      "phone_number": "",
+      "passport_nationality": "",
+      "home_address": ""
+    },
+    "persons_details": [
+      {
+        "name": "",
+        "age": null,
+        "gender": "",
+        "relation_to_user": ""
+      }
+    ],
+    "preferences": {
+      "travel_theme": [],
+      "cuisine_preferences": [],
+      "dietary_restrictions": [],
+      "interests": [],
+      "hotel_type": "",
+      "flight_seat_type": ""
+    },
+    "itinerary": {
+      "trip_name": "",
+      "origin": "",
+      "destination": "",
+      "start_date": "",
+      "end_date": "",
+      "days": [
+        {
+          "day_number": null,
+          "date": "",
+          "schedule": [
+            {
+              "activity_type": "",
+              "start_time": "",
+              "end_time": "",
+              "description": "",
+              "details": {},
+              "booking_status": ""
+            }
+          ]
+        }
+      ]
+    },
+    "budget": {
+      "total_budget": null,
+      "currency": "",
+      "expense_breakdown": {
+        "flights": null,
+        "hotels": null,
+        "food": null,
+        "activities": null,
+        "transport": null,
+        "miscellaneous": null
+      }
+    },
+    "currency_exchange": {
+      "from_currency": "",
+      "to_currency": "",
+      "exchange_rate": null,
+      "last_updated": ""
+    }
+  }
+}
