@@ -10,6 +10,8 @@ from fastapi import FastAPI, HTTPException, Body
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
+from main_agent.remote_connections import RemoteConnections
+
 # Load environment variables from .env file
 load_dotenv()
 
@@ -62,17 +64,32 @@ class Message(BaseModel):
     message: str
     timestamp: str
 
-# --- Mock AI Agent ---
+# --- AI Agent Communication ---
 
-def get_ai_response(user_message: str) -> str:
+async def get_agent_response(user_message: str) -> str:
     """
-    Mocks a response from an LLM/AI agent.
+    Calls the main agent to get a response.
     """
-    logger.info(f"Getting AI response for: '{user_message}'")
-    time.sleep(2) # Simulate a network delay
-    response = f"This is a mocked AI response to your message: '{user_message}'"
-    logger.info(f"Generated AI response: '{response}'")
-    return response
+    logger.info(f"Getting agent response for: '{user_message}'")
+    main_agent_url = os.getenv("MAIN_AGENT_URL")
+    if not main_agent_url:
+        logger.error("MAIN_AGENT_URL environment variable not set.")
+        return "Error: Main agent URL not configured."
+
+    try:
+        connections = await RemoteConnections.create()
+        response_dict = await connections.invoke_agent(main_agent_url, user_message)
+        await connections.close()
+
+        if "result" in response_dict:
+            return response_dict["result"]
+        else:
+            error_message = response_dict.get("error", "Unknown error from agent.")
+            logger.error(f"Error from main agent: {error_message}")
+            return f"Error: {error_message}"
+    except Exception as e:
+        logger.error(f"Failed to connect to main agent: {e}", exc_info=True)
+        return "Error: Could not connect to the main agent."
 
 # --- API Endpoint ---
 
@@ -109,7 +126,7 @@ async def chat(request: ChatRequest = Body(...)):
         messages_ref.update({"typing": True})
 
         # 3. Get response from AI agent
-        agent_response_text = get_ai_response(user_message_text)
+        agent_response_text = await get_agent_response(user_message_text)
 
         # 4. Store agent's response in Firebase
         agent_message = Message(
