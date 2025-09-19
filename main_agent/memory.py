@@ -1,6 +1,7 @@
 import json
 import os
-from typing import Any
+from typing import Any, Dict, List
+from pydantic import BaseModel
 
 from google.adk.agents.callback_context import CallbackContext
 from google.adk.tools import ToolContext
@@ -57,18 +58,44 @@ def update_state(tool_context: ToolContext, state: ItineraryState):
     """
     tool_context.state["itinerary_state"] = state.dict()
 
+def _update_nested_field(obj: Any, keys: List[str], value: Any):
+    """
+    Recursively traverses the object structure to update a nested field.
+    """
+    key = keys[0]
+    if len(keys) == 1:
+        if isinstance(obj, BaseModel):
+            setattr(obj, key, value)
+        elif isinstance(obj, dict):
+            obj[key] = value
+        elif isinstance(obj, list):
+            obj[int(key)] = value
+        return
+
+    next_obj = None
+    if isinstance(obj, BaseModel):
+        next_obj = getattr(obj, key)
+    elif isinstance(obj, dict):
+        next_obj = obj.get(key)
+    elif isinstance(obj, list):
+        try:
+            next_obj = obj[int(key)]
+        except IndexError:
+            # If the index is out of bounds, we cannot proceed.
+            # This case might need specific handling based on requirements,
+            # such as appending to the list if the index is equivalent to the list's length.
+            return
+
+    if next_obj is not None:
+        _update_nested_field(next_obj, keys[1:], value)
+
+
 def update_state_field(tool_context: ToolContext, key: str, value: Any) -> str:
     """
     Updates a single field in the itinerary state.
     """
     state = get_state(tool_context)
     keys = key.split('.')
-    obj = state
-    for k in keys[:-1]:
-        if isinstance(obj, list):
-            obj = obj[int(k)]
-        else:
-            obj = getattr(obj, k)
-    setattr(obj, keys[-1], value)
+    _update_nested_field(state, keys, value)
     update_state(tool_context, state)
     return "Itinerary state updated successfully."
