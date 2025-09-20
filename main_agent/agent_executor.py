@@ -1,6 +1,7 @@
 """Itinerary Agent Executor for A2A integration (Orchestrator)."""
 
 import datetime
+import json
 import logging
 import uuid
 from collections.abc import AsyncGenerator
@@ -68,12 +69,12 @@ class MainADKAgentExecutor(AgentExecutor):
             await self._ensure_adk_session(user_id, session_id)
 
             # Step 3: Send the input and loop until a final response is received
-            final_message_text = await self._run_agent_and_get_response(
+            final_message_text, final_state = await self._run_agent_and_get_response(
                 user_input, user_id, session_id
             )
 
             # Step 4: Send the response back to the client
-            await self._send_response(event_queue, context, final_message_text)
+            await self._send_response(event_queue, context, final_message_text, final_state)
 
         except Exception as e:
             await self._handle_error(e, event_queue, context)
@@ -112,7 +113,7 @@ class MainADKAgentExecutor(AgentExecutor):
 
     async def _run_agent_and_get_response(
         self, user_input: str, user_id: str, session_id: str
-    ) -> str:
+    ) -> tuple[str, dict]:
         """Run the ADK agent and extract the final response."""
         request_content = adk_types.Content(
             role="user", parts=[adk_types.Part(text=user_input)]
@@ -146,16 +147,27 @@ class MainADKAgentExecutor(AgentExecutor):
                     f"{self.agent.name} received final event without model content: {event}"
                 )
 
-        return final_message_text
+        adk_session: ADKSession | None = await self.session_service.get_session(
+            app_name=self.runner.app_name, user_id=user_id, session_id=session_id
+        )
+        current_state = adk_session.state.get("itinerary_state", {})
+
+        return final_message_text, current_state
 
     async def _send_response(
-        self, event_queue: EventQueue, context: RequestContext, message_text: str
+        self, event_queue: EventQueue, context: RequestContext, message_text: str, current_state: dict
     ) -> None:
         """Send the response back via the event queue."""
         logger.info(f"Sending itinerary response for task {context.task_id}")
+
+        response_data = {
+            "result": message_text,
+            "state": current_state
+        }
+
         await event_queue.enqueue_event(
             new_agent_text_message(
-                text=message_text,
+                text=json.dumps(response_data),
                 context_id=context.context_id,
                 task_id=context.task_id,
             )
