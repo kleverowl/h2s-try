@@ -2,6 +2,7 @@ import os
 import sys
 from datetime import datetime, timezone
 import logging
+import json
 from typing import Optional
 
 import firebase_admin
@@ -81,7 +82,20 @@ async def get_agent_response(user_message: str) -> str:
         await connections.close()
 
         if "result" in response_dict:
-            return response_dict["result"]
+            try:
+                # The result from the agent is a JSON string, so we parse it.
+                agent_output = json.loads(response_dict["result"])
+                message = agent_output.get("result", "")
+                state = agent_output.get("state", {})
+
+                # Log the state
+                logger.info(f"Received state from agent: {state}")
+
+                return message
+            except (json.JSONDecodeError, TypeError):
+                # Fallback for when the response is not a valid JSON string
+                logger.warning("Could not decode JSON from agent response, returning as is.")
+                return response_dict["result"]
         else:
             error_message = response_dict.get("error", "Unknown error from agent.")
             logger.error(f"Error from main agent: {error_message}")
