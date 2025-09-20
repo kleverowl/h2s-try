@@ -1,12 +1,13 @@
 import os
 import sys
+import uuid
 from datetime import datetime, timezone
 import time
 import logging
 
 import firebase_admin
 from firebase_admin import credentials, db
-from fastapi import FastAPI, HTTPException, Body
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Body
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
@@ -63,8 +64,49 @@ class Message(BaseModel):
     sender: str
     message: str
     timestamp: str
+    activityType: str = None
+    activity_object: str = None
+    bookingRef: str = None
+    message_type: str = "text"
 
 # --- AI Agent Communication ---
+
+async def process_agent_response(
+    user_message_text: str, user_id: str, itinerary_id: str
+):
+    """
+    Background task to get agent response and update Firebase.
+    """
+    messages_path = f"users/{user_id}/itineraries/{itinerary_id}/messages"
+    messages_ref = db.reference(messages_path)
+
+    try:
+        agent_response_text = await get_agent_response(user_message_text)
+
+        if "Error:" not in agent_response_text:
+            agent_message = Message(
+                sender="model",
+                message=agent_response_text,
+                timestamp=datetime.now(timezone.utc).isoformat(),
+                activityType=None,
+                activity_object=None,
+                bookingRef=None,
+                message_type="text",
+            )
+            # Use a new UUID for the agent's message
+            agent_message_id = str(uuid.uuid4())
+            messages_ref.child(agent_message_id).set(agent_message.model_dump())
+            logger.info("Agent message stored successfully.")
+
+    except Exception as e:
+        logger.error(
+            f"An error occurred during agent processing in background: {e}",
+            exc_info=True,
+        )
+    finally:
+        # Always set typing to false, even if there was an error.
+        logger.info("Setting typing indicator to False.")
+        messages_ref.update({"typing": False})
 
 async def get_agent_response(user_message: str) -> str:
     """
@@ -94,10 +136,13 @@ async def get_agent_response(user_message: str) -> str:
 # --- API Endpoint ---
 
 @app.post("/chat")
-async def chat(request: ChatRequest = Body(...)):
+async def chat(
+    request: ChatRequest = Body(...), background_tasks: BackgroundTasks = None
+):
     """
-    Handles incoming chat messages, stores them in Firebase,
-    gets a response from an AI agent, and stores that response.
+    Handles incoming chat messages. Stores the user's message in Firebase,
+    triggers a background task to get the agent's response, and returns
+    an immediate success response.
     """
     logger.info(f"Received chat request: {request.model_dump()}")
 
@@ -107,53 +152,41 @@ async def chat(request: ChatRequest = Body(...)):
 
     messages_path = f"users/{user_id}/itineraries/{itinerary_id}/messages"
     messages_ref = db.reference(messages_path)
-    
-    logger.info(f"Using Firebase messages path: {messages_path}")
 
     try:
-        # 1. Store user message in Firebase
+        # 1. Store user message in Firebase with a unique ID
+        user_message_id = str(uuid.uuid4())
         user_message = Message(
             sender="user",
             message=user_message_text,
-            timestamp=datetime.now(timezone.utc).isoformat()
+            timestamp=datetime.now(timezone.utc).isoformat(),
+            activityType=None,
+            activity_object=None,
+            bookingRef=None,
+            message_type="text",
         )
-        logger.info(f"Pushing user message to Firebase: {user_message.model_dump()}")
-        messages_ref.push(user_message.model_dump())
+        messages_ref.child(user_message_id).set(user_message.model_dump())
         logger.info("User message stored successfully.")
 
         # 2. Set typing: true
         logger.info("Setting typing indicator to True.")
         messages_ref.update({"typing": True})
 
-        # 3. Get response from AI agent
-        agent_response_text = await get_agent_response(user_message_text)
-
-        # 4. Store agent's response in Firebase
-        agent_message = Message(
-            sender="agent",
-            message=agent_response_text,
-            timestamp=datetime.now(timezone.utc).isoformat()
+        # 3. Add agent processing to background tasks
+        background_tasks.add_task(
+            process_agent_response, user_message_text, user_id, itinerary_id
         )
-        logger.info(f"Pushing agent message to Firebase: {agent_message.model_dump()}")
-        messages_ref.push(agent_message.model_dump())
-        logger.info("Agent message stored successfully.")
+        logger.info("Agent processing added to background tasks.")
 
-        # 5. Set typing: false
-        logger.info("Setting typing indicator to False.")
-        messages_ref.update({"typing": False})
-
-        logger.info("Chat request processed successfully.")
-        return {"status": "success", "response": agent_response_text}
+        # 4. Return immediate success response
+        logger.info("Chat request processed successfully, returning immediate response.")
+        return {"status": "success", "message": "Message sent to agent"}
 
     except Exception as e:
         logger.error(f"An error occurred during chat processing: {e}", exc_info=True)
-        try:
-            logger.warning("Attempting to set typing indicator to False after error.")
-            messages_ref.update({"typing": False})
-        except Exception as db_e:
-            logger.error(f"Could not set typing to false after an error: {db_e}", exc_info=True)
-        
-        raise HTTPException(status_code=500, detail=f"An internal error occurred: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"An internal error occurred: {e}"
+        )
 
 # --- Helper for running with uvicorn ---
 if __name__ == "__main__":
