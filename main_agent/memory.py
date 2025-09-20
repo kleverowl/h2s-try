@@ -100,3 +100,11 @@ def update_state_field(tool_context: ToolContext, key: str, value: Any) -> str:
     _update_nested_field(state, keys, value)
     update_state(tool_context, state)
     return "Itinerary state updated successfully."
+
+
+def get_current_state(tool_context: ToolContext) -> Dict[str, Any]:
+    """
+    Gets the current itinerary state as a dictionary.
+    """
+    state = get_state(tool_context)
+    return state.dict()

@@ -18,7 +18,7 @@ from config import (
     HOTEL_AGENT_A2A_URL,
 )
 from main_agent.remote_connections import RemoteConnections
-from main_agent.memory import update_state_field
+from main_agent.memory import update_state_field, get_current_state
 
 # Add project root to the Python path to resolve module import errors
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -82,4 +82,5 @@ def delegate_task_sync(agent_name: str, task_description: str) -> Dict[str, Any]
 TOOLS = {
     "update_state_field": update_state_field,
     "delegate_task_to_agent": delegate_task_sync,
+    "get_current_state": get_current_state,
 }
