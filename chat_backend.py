@@ -1,14 +1,15 @@
 import os
 import sys
 from datetime import datetime, timezone
-import time
 import logging
+from typing import Optional
 
 import firebase_admin
 from firebase_admin import credentials, db
-from fastapi import FastAPI, HTTPException, Body
+from fastapi import FastAPI, HTTPException, Body, BackgroundTasks
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
+import uvicorn
 
 from main_agent.remote_connections import RemoteConnections
 
@@ -37,23 +38,21 @@ try:
         logger.critical("FATAL: FIREBASE_DATABASE_URL environment variable is not set.")
         sys.exit("Exiting: FIREBASE_DATABASE_URL is not set.")
 
-    cred = credentials.Certificate(cred_path)
-    firebase_admin.initialize_app(cred, {
-        'databaseURL': firebase_database_url
-    })
-    logger.info("Firebase initialized successfully.")
+    if not firebase_admin._apps:  # 👈 check if already initialized
+        cred = credentials.Certificate(cred_path)
+        firebase_admin.initialize_app(cred, {
+            'databaseURL': firebase_database_url
+        })
+        logger.info("Firebase initialized successfully.")
+    else:
+        logger.info("Firebase already initialized. Skipping re-initialization.")
 
-except (ValueError, SystemExit) as e:
-    logger.error(e)
-    sys.exit(1)
 except Exception as e:
-    logger.critical(f"CRITICAL: An unexpected error occurred during Firebase initialization: {e}", exc_info=True)
+    logger.critical(f"CRITICAL: Firebase initialization error: {e}", exc_info=True)
     sys.exit(1)
-
 app = FastAPI()
 
 # --- Pydantic Models ---
-
 class ChatRequest(BaseModel):
     user_id: str = Field(..., example="user123")
     itinerary_id: str = Field(..., example="itinerary456")
@@ -63,15 +62,15 @@ class Message(BaseModel):
     sender: str
     message: str
     timestamp: str
+    message_type: str = "text"
+    activityType: Optional[str] = None
+    activity_object: Optional[str] = None
+    bookingRef: Optional[str] = None
 
 # --- AI Agent Communication ---
-
 async def get_agent_response(user_message: str) -> str:
-    """
-    Calls the main agent to get a response.
-    """
     logger.info(f"Getting agent response for: '{user_message}'")
-    main_agent_url = os.getenv("MAIN_AGENT_URL")
+    main_agent_url = os.getenv("HOST_AGENT_A2A_URL")
     if not main_agent_url:
         logger.error("MAIN_AGENT_URL environment variable not set.")
         return "Error: Main agent URL not configured."
@@ -91,75 +90,68 @@ async def get_agent_response(user_message: str) -> str:
         logger.error(f"Failed to connect to main agent: {e}", exc_info=True)
         return "Error: Could not connect to the main agent."
 
-# --- API Endpoint ---
-
-@app.post("/chat")
-async def chat(request: ChatRequest = Body(...)):
-    """
-    Handles incoming chat messages, stores them in Firebase,
-    gets a response from an AI agent, and stores that response.
-    """
-    logger.info(f"Received chat request: {request.model_dump()}")
-
-    user_id = request.user_id
-    itinerary_id = request.itinerary_id
-    user_message_text = request.message
-
-    messages_path = f"users/{user_id}/itineraries/{itinerary_id}/messages"
+# --- Background Task ---
+async def process_agent_response_in_background(user_id: str, itinerary_id: str, user_message_text: str):
+    messages_path = f"users/user_id/{user_id}/itineraries/{itinerary_id}/messages/message_id"
     messages_ref = db.reference(messages_path)
-    
-    logger.info(f"Using Firebase messages path: {messages_path}")
+    typing_ref = db.reference(f"users/user_id/{user_id}/itineraries/{itinerary_id}/messages")
 
+    logger.info(f"Background task: Processing agent response for user: {user_id}")
     try:
-        # 1. Store user message in Firebase
-        user_message = Message(
-            sender="user",
-            message=user_message_text,
-            timestamp=datetime.now(timezone.utc).isoformat()
-        )
-        logger.info(f"Pushing user message to Firebase: {user_message.model_dump()}")
-        messages_ref.push(user_message.model_dump())
-        logger.info("User message stored successfully.")
-
-        # 2. Set typing: true
-        logger.info("Setting typing indicator to True.")
-        messages_ref.update({"typing": True})
-
-        # 3. Get response from AI agent
         agent_response_text = await get_agent_response(user_message_text)
 
-        # 4. Store agent's response in Firebase
         agent_message = Message(
-            sender="agent",
+            sender="model",
             message=agent_response_text,
             timestamp=datetime.now(timezone.utc).isoformat()
         )
-        logger.info(f"Pushing agent message to Firebase: {agent_message.model_dump()}")
         messages_ref.push(agent_message.model_dump())
-        logger.info("Agent message stored successfully.")
-
-        # 5. Set typing: false
-        logger.info("Setting typing indicator to False.")
-        messages_ref.update({"typing": False})
-
-        logger.info("Chat request processed successfully.")
-        return {"status": "success", "response": agent_response_text}
+        logger.info("Background task: Agent message stored successfully.")
 
     except Exception as e:
-        logger.error(f"An error occurred during chat processing: {e}", exc_info=True)
+        logger.error(f"Error in background agent processing: {e}", exc_info=True)
         try:
-            logger.warning("Attempting to set typing indicator to False after error.")
-            messages_ref.update({"typing": False})
+            error_message = Message(
+                sender="model",
+                message=f"Sorry, an error occurred: {str(e)}",
+                timestamp=datetime.now(timezone.utc).isoformat()
+            )
+            messages_ref.push(error_message.model_dump())
         except Exception as db_e:
-            logger.error(f"Could not set typing to false after an error: {db_e}", exc_info=True)
-        
-        raise HTTPException(status_code=500, detail=f"An internal error occurred: {e}")
+            logger.error(f"Could not save error message to Firebase: {db_e}", exc_info=True)
+    finally:
+        try:
+            typing_ref.update({"typing": False})
+        except Exception as db_e:
+            logger.error(f"Could not set typing to false: {db_e}", exc_info=True)
 
-# --- Helper for running with uvicorn ---
+# --- API Endpoint ---
+@app.post("/chat")
+async def chat(request: ChatRequest, background_tasks: BackgroundTasks):
+    logger.info(f"Received chat request from user: {request.user_id}")
+    typing_ref = db.reference(f"users/user_id/{request.user_id}/itineraries/{request.itinerary_id}/messages")
+
+    try:
+        typing_ref.update({"typing": True})
+    except Exception as e:
+        logger.error(f"Error setting typing indicator: {e}", exc_info=True)
+
+    # Add background task (runs after sending API response)
+    background_tasks.add_task(
+        process_agent_response_in_background,
+        request.user_id,
+        request.itinerary_id,
+        request.message
+    )
+
+    # Return immediately, no delays
+    return {
+        "status": "success",
+        "message": "Message received and being processed"
+    }
+
+# --- Uvicorn Entrypoint ---
 if __name__ == "__main__":
-    import uvicorn
-    # Port can be configured via an environment variable or defaults to 8000
     port = int(os.getenv("PORT", 8014))
-    logger.info("Starting FastAPI server with uvicorn.")
-    logger.info(f"Access the interactive API docs at http://127.0.0.1:{port}/docs")
-    uvicorn.run(app, host="127.0.0.1", port=port)
+    logger.info(f"Starting FastAPI server on http://127.0.0.1:{port}")
+    uvicorn.run("chat_backend:app", host="127.0.0.1", port=port, reload=False)

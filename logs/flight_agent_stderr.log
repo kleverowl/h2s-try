@@ -4,7 +4,7 @@ INFO:__main__:Starting Flight Concierge Agent server on http://localhost:8002
 INFO:__main__:Agent Name: Flight Concierge Agent, Version: 1.0.0
 INFO:__main__:  Skill: Search for Flights (ID: flight_search, Tags: ['flights', 'search', 'booking', 'travel', 'itinerary'])
 INFO:__main__:  Skill: Check Flight Status (ID: flight_status_check, Tags: ['flights', 'status', 'tracking', 'real-time', 'travel'])
-INFO:     Started server process [48464]
+INFO:     Started server process [56004]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://localhost:8002 (Press CTRL+C to quit)

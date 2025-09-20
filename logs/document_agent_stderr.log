@@ -3,7 +3,7 @@ INFO:document_agent.agent_executor:ADK Runner accepted for app 'DOCUMENT_a2a_app
 INFO:__main__:Starting Document Concierge Agent server on http://localhost:8009
 INFO:__main__:Agent Name: Document Concierge Agent, Version: 1.0.0
 INFO:__main__:  Skill: Verify Document (ID: document_verification, Tags: ['document', 'verification', 'passport', 'visa', 'travel'])
-INFO:     Started server process [26632]
+INFO:     Started server process [58780]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://localhost:8009 (Press CTRL+C to quit)

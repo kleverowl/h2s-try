@@ -1,0 +1,23 @@
+[Unit]
+Description=Agent Manager Service
+After=network.target
+
+[Service]
+# IMPORTANT: Replace <your_user> with your actual username on the Ubuntu server
+User=<your_user>
+# IMPORTANT: Replace this with the absolute path to your project directory on the Ubuntu server
+WorkingDirectory=/path/to/your/project/try6
+
+# Command to start the script. Assumes a virtual environment at /path/to/your/project/try6/.venv
+# If your venv is elsewhere, update the path to python
+ExecStart=/path/to/your/project/try6/.venv/bin/python scripts/start_agents.py
+
+# Restart the service if it fails
+Restart=always
+
+# Specifies the file where environment variables are stored
+EnvironmentFile=/etc/default/travel-app
+
+[Install]
+# Enable the service to start on boot
+WantedBy=multi-user.target

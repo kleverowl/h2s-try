@@ -4,7 +4,7 @@ INFO:__main__:Starting Food Concierge Agent server on http://localhost:8003
 INFO:__main__:Agent Name: Food Concierge Agent, Version: 1.0.0
 INFO:__main__:  Skill: Search for Restaurants (ID: food_search, Tags: ['restaurants', 'reservations', 'dining', 'dining plan'])
 INFO:__main__:  Skill: Check Restaurant Availability (ID: restaurant_availability_check, Tags: ['restaurants', 'availability', 'reservations', 'real-time', 'dining'])
-INFO:     Started server process [49392]
+INFO:     Started server process [46620]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://localhost:8003 (Press CTRL+C to quit)

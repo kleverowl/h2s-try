@@ -4,7 +4,7 @@ INFO:__main__:Starting Weather Concierge Agent server on http://localhost:8004
 INFO:__main__:Agent Name: Weather Concierge Agent, Version: 1.0.0
 INFO:__main__:  Skill: Get Current Weather (ID: get_current_weather, Tags: ['weather', 'current', 'temperature', 'forecast', 'conditions'])
 INFO:__main__:  Skill: Get Weather Forecast (ID: get_weather_forecast, Tags: ['weather', 'forecast', 'planning', 'outlook', 'rain'])
-INFO:     Started server process [37428]
+INFO:     Started server process [12920]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://localhost:8004 (Press CTRL+C to quit)

@@ -3,7 +3,7 @@ INFO:budget_agent.agent_executor:ADK Runner accepted for app 'BUDGET_a2a_app' fo
 INFO:__main__:Starting Budget Concierge Agent server on http://localhost:8006
 INFO:__main__:Agent Name: Budget Concierge Agent, Version: 1.0.0
 INFO:__main__:  Skill: Manage Budget (ID: budget_management, Tags: ['budget', 'expenses', 'finance', 'travel', 'itinerary'])
-INFO:     Started server process [42788]
+INFO:     Started server process [25152]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://localhost:8006 (Press CTRL+C to quit)
